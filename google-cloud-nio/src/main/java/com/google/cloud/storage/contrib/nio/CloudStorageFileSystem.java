@@ -161,22 +161,23 @@ public final class CloudStorageFileSystem extends FileSystem {
    */
   private static CloudStorageFileSystemProvider getCloudStorageFileSystemProvider(
       CloudStorageConfiguration config, StorageOptions storageOptions) {
-    CloudStorageFileSystemProvider cloudStorageFileSystemProvider =
+    CloudStorageFileSystemProvider newProvider =
         (storageOptions == null)
             ? new CloudStorageFileSystemProvider(config.userProject())
             : new CloudStorageFileSystemProvider(config.userProject(), storageOptions);
-    Set<CloudStorageFileSystemProvider> cloudStorageFileSystemProviderSet = new HashSet<>();
-    if (CONFIG_TO_PROVIDERS_MAP.get(config) != null) {
-      cloudStorageFileSystemProviderSet = CONFIG_TO_PROVIDERS_MAP.get(config);
-      for (CloudStorageFileSystemProvider provider : cloudStorageFileSystemProviderSet) {
-        if (provider.equals(cloudStorageFileSystemProvider)) {
-          cloudStorageFileSystemProvider = provider;
+    Set<CloudStorageFileSystemProvider> existingProviders = CONFIG_TO_PROVIDERS_MAP.get(config);
+    if (existingProviders == null) {
+      existingProviders = new HashSet<>();
+    } else {
+      for (CloudStorageFileSystemProvider existiningProvider : existingProviders) {
+        if (existiningProvider.equals(newProvider)) {
+          return existiningProvider;
         }
       }
     }
-    cloudStorageFileSystemProviderSet.add(cloudStorageFileSystemProvider);
-    CONFIG_TO_PROVIDERS_MAP.put(config, cloudStorageFileSystemProviderSet);
-    return cloudStorageFileSystemProvider;
+    existingProviders.add(newProvider);
+    CONFIG_TO_PROVIDERS_MAP.put(config, existingProviders);
+    return newProvider;
   }
 
   /**
