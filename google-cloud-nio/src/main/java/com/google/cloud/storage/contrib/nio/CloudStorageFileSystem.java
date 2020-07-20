@@ -38,6 +38,7 @@ import java.nio.file.WatchService;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -65,8 +66,8 @@ public final class CloudStorageFileSystem extends FileSystem {
   private final CloudStorageFileSystemProvider provider;
   private final String bucket;
   private final CloudStorageConfiguration config;
-  private static final Map<CloudStorageConfiguration, CloudStorageFileSystemProvider>
-      FILE_SYSTEM_CONFIG = new HashMap<>();
+  private static final Map<CloudStorageConfiguration, Set<CloudStorageFileSystemProvider>>
+      CONFIG_TO_PROVIDERS_MAP = new HashMap<>();
 
   // Users can change this: then this affects every filesystem object created
   // later, including via SPI. This is meant to be done only once, at the beginning
@@ -146,7 +147,8 @@ public final class CloudStorageFileSystem extends FileSystem {
     checkArgument(
         !bucket.startsWith(URI_SCHEME + ":"), "Bucket name must not have schema: %s", bucket);
     checkNotNull(config);
-    return new CloudStorageFileSystem(getCloudStorageFileSystemProvider(config), bucket, config);
+    return new CloudStorageFileSystem(
+        getCloudStorageFileSystemProvider(config, null), bucket, config);
   }
 
   /**
@@ -158,18 +160,22 @@ public final class CloudStorageFileSystem extends FileSystem {
    * @return {@code CloudStorageFileSystemProvider} object
    */
   private static CloudStorageFileSystemProvider getCloudStorageFileSystemProvider(
-      CloudStorageConfiguration config, StorageOptions... storageOptions) {
+      CloudStorageConfiguration config, StorageOptions storageOptions) {
     CloudStorageFileSystemProvider cloudStorageFileSystemProvider =
-        (storageOptions.length >= 1)
-            ? new CloudStorageFileSystemProvider(config.userProject(), storageOptions[0])
-            : new CloudStorageFileSystemProvider(config.userProject());
-    if (!FILE_SYSTEM_CONFIG.isEmpty()
-        && FILE_SYSTEM_CONFIG.get(config) != null
-        && FILE_SYSTEM_CONFIG.get(config).equals(cloudStorageFileSystemProvider)) {
-      cloudStorageFileSystemProvider = FILE_SYSTEM_CONFIG.get(config);
-    } else {
-      FILE_SYSTEM_CONFIG.put(config, cloudStorageFileSystemProvider);
+        (storageOptions == null)
+            ? new CloudStorageFileSystemProvider(config.userProject())
+            : new CloudStorageFileSystemProvider(config.userProject(), storageOptions);
+    Set<CloudStorageFileSystemProvider> cloudStorageFileSystemProviderSet = new HashSet<>();
+    if (CONFIG_TO_PROVIDERS_MAP.get(config) != null) {
+      cloudStorageFileSystemProviderSet = CONFIG_TO_PROVIDERS_MAP.get(config);
+      for (CloudStorageFileSystemProvider provider : cloudStorageFileSystemProviderSet) {
+        if (provider.equals(cloudStorageFileSystemProvider)) {
+          cloudStorageFileSystemProvider = provider;
+        }
+      }
     }
+    cloudStorageFileSystemProviderSet.add(cloudStorageFileSystemProvider);
+    CONFIG_TO_PROVIDERS_MAP.put(config, cloudStorageFileSystemProviderSet);
     return cloudStorageFileSystemProvider;
   }
 
