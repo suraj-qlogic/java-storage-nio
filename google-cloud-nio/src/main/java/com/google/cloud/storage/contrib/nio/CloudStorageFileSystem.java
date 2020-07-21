@@ -151,14 +151,6 @@ public final class CloudStorageFileSystem extends FileSystem {
         getCloudStorageFileSystemProvider(config, null), bucket, config);
   }
 
-  /**
-   * Creates new file system provider instance for {@code CloudStorageFileSystemProvider}.
-   *
-   * @param config CloudStorageConfiguration to initialize {@code CloudStorageFileSystemProvider}
-   *     object
-   * @param storageOptions
-   * @return {@code CloudStorageFileSystemProvider} object
-   */
   private static CloudStorageFileSystemProvider getCloudStorageFileSystemProvider(
       CloudStorageConfiguration config, StorageOptions storageOptions) {
     CloudStorageFileSystemProvider newProvider =
